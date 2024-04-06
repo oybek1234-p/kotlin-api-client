@@ -66,16 +66,6 @@ val javadocJar by tasks.registering(Jar::class) {
     from(tasks.javadoc)
 }
 
-// Retrieve credentials and other properties
-val ossrhUsername: String by project
-val ossrhPassword: String by project
-
-// Nexus Staging Plugin Configuration
-configure<io.codearte.gradle.nexus.NexusStagingExtension> {
-    packageGroup = "com.recombee"
-    username = ossrhUsername
-    password = ossrhPassword
-}
 
 publishing {
     publications {
@@ -115,10 +105,7 @@ publishing {
         maven {
             val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
             url = uri(releasesRepoUrl)
-            credentials {
-                username = ossrhUsername
-                password = ossrhPassword
-            }
+
         }
     }
 }

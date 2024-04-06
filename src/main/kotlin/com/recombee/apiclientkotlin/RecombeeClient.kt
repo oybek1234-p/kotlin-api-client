@@ -1,33 +1,33 @@
 package com.recombee.apiclientkotlin
 
-import java.net.URLEncoder
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-import java.nio.charset.StandardCharsets
-import java.io.IOException
-import java.util.concurrent.TimeUnit
-import java.lang.reflect.Type
-import java.lang.reflect.ParameterizedType
-
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.reflect.TypeToken
-
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Request as OkHttp3Request
-import okhttp3.RequestBody.Companion.toRequestBody
-
-import com.recombee.apiclientkotlin.util.NetworkClient
-import com.recombee.apiclientkotlin.util.Region
-import com.recombee.apiclientkotlin.requests.*
 import com.recombee.apiclientkotlin.bindings.*
 import com.recombee.apiclientkotlin.exceptions.*
+import com.recombee.apiclientkotlin.requests.*
+import com.recombee.apiclientkotlin.util.NetworkClient
+import com.recombee.apiclientkotlin.util.Region
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import java.io.InterruptedIOException
+import java.io.UnsupportedEncodingException
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import java.net.SocketTimeoutException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.security.InvalidKeyException
+import java.security.NoSuchAlgorithmException
+import java.util.concurrent.TimeUnit
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+import okhttp3.Request as OkHttp3Request
+
 
 /**
  * Client for interacting with Recombee API.
@@ -52,10 +52,10 @@ public class RecombeeClient(
 
     private fun getRegionalBaseUri(region: Region): String {
         return when (region) {
-            Region.ApSe -> "client-rapi-ap-se.recombee.com"
-            Region.CaEast -> "client-rapi-ca-east.recombee.com"
-            Region.EuWest -> "client-rapi-eu-west.recombee.com"
-            Region.UsWest -> "client-rapi-us-west.recombee.com"
+            Region.ApSe -> "rapi-ap-se.recombee.com"
+            Region.CaEast -> "rapi-ca-east.recombee.com"
+            Region.EuWest -> "rapi-eu-west.recombee.com"
+            Region.UsWest -> "rapi-us-west.recombee.com"
         }
     }
 
@@ -70,7 +70,7 @@ public class RecombeeClient(
             hostUri = getRegionalBaseUri(region)
         }
 
-        return hostUri ?: "client-rapi-eu-west.recombee.com"
+        return hostUri ?: "rapi-eu-west.recombee.com"
     }
 
     private fun createJsonRequestBody(parameters: Map<String, Any>): RequestBody {
@@ -181,6 +181,15 @@ public class RecombeeClient(
         return urlBuilder.build().toString()
     }
 
+    private fun formatQueryParameterValue(`val`: Any): String? {
+        return try {
+            URLEncoder.encode(`val`.toString(), "UTF-8")
+        } catch (e: UnsupportedEncodingException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     private fun buildUrlWithoutSchemeAndBase(urlBuilder: HttpUrl.Builder): String {
         val temporaryUrl = urlBuilder.build()
 
@@ -197,14 +206,14 @@ public class RecombeeClient(
 
     private fun appendHmacParameters(urlBuilder: HttpUrl.Builder) {
         val timestamp = unixTimestampNow().toString()
-        urlBuilder.addQueryParameter("frontend_timestamp", timestamp)
+        urlBuilder.addQueryParameter("hmac_timestamp", timestamp)
 
         val urlToBeSigned = buildUrlWithoutSchemeAndBase(urlBuilder)
         Mac.getInstance("HmacSHA1").apply {
             init(SecretKeySpec(publicTokenBytes, "HmacSHA1"))
             val hmacBytes = doFinal(urlToBeSigned.toByteArray(StandardCharsets.UTF_8))
             val hmacRes = hmacBytes.joinToString("") { String.format("%02x", it) }
-            urlBuilder.addQueryParameter("frontend_sign", hmacRes)
+            urlBuilder.addQueryParameter("hmac_sign", hmacRes)
         }
     }
 
